@@ -144,11 +144,25 @@ pheatgsv <- function(inlim=lim$hallmark,mask="HALLMARK_|KEGG_|WP_",showp=T,adjus
     colnames(tmp) <- paste(day,colnames(tmp))
     coefs <- cbind(coefs,tmp)
   }
-  acol <- data.frame("Day"=substring(colnames(coefs),1,regexpr("[ ]",colnames(coefs))-1),
+  acol <- data.frame( "HBV"=NA,
+    "Day"=substring(colnames(coefs),1,regexpr("[ ]",colnames(coefs))-1),
                      "Dose"=sub("-ctrl","",substring(colnames(coefs),regexpr("[ ]",colnames(coefs))+1)),
                      row.names = colnames(coefs))
   acol$Day <- factor(acol$Day,levels=c("d1","d3","d10","d13"))
   acol <- acol[order(acol$Day),]
+  for(i in 1:nrow(acol)){
+    ctrlid <- pdat$SampleID[as.character(pdat$Day)==as.character(acol[i,"Day"]) &
+                              pdat$Dose==0]
+    treatid <- pdat$SampleID[as.character(pdat$Day)==as.character(acol[i,"Day"]) &
+                        as.character(pdat$Dose)==acol[i,"Dose"]]
+    #for(d in doses){
+      #treat <- pdat$SampleID[as.character(pdat$Day)==as.character(acol[i,"Day"]) &
+      #                         pdat$Dose==d]
+      acol[i,"HBV"] <- mean(hbvcounts$log2CPM[as.character(treatid)])-mean(hbvcounts$log2CPM[as.character(ctrlid)])
+    #}
+  }
+  acol <- acol[,c("HBV","Dose")]
+  colnames(acol) <- c("logFC HBV","Dose")
   mx <- max(abs(coefs))
   brks <- (mx*(-32:32))/32
   if(showp){
@@ -173,6 +187,8 @@ pheatgsv <- function(inlim=lim$hallmark,mask="HALLMARK_|KEGG_|WP_",showp=T,adjus
   }
   
   rownames(coefs) <-sub(mask,"",rownames(coefs))
+  rownames(coefs) <- gsub("_"," ",rownames(coefs))
+
   pheatmap(coefs[,rownames(acol)],
            color = colorRampPalette(c("navy","blue","gray95","red","darkred"))(64),
            breaks = brks,
@@ -180,10 +196,11 @@ pheatgsv <- function(inlim=lim$hallmark,mask="HALLMARK_|KEGG_|WP_",showp=T,adjus
           border_color = NA,
           gaps_col = c(3,6,9),
           annotation_colors = list("Day"=c("d1"="#10c070","d3"="#058045","d10"="#056035","d13"="#054020"),
-                                   "Dose"=c("0.03"="gray80","0.3"="gray40","10"="gray20")),
+                                   "Dose"=c("0.03"="gray80","0.3"="gray40","10"="gray20"),
+                                   "logFC HBV"=c("#00d000","gray10")),
            annotation_col = acol,cluster_cols = F,show_colnames = F,...)
 }
-pheatgsv(fontsize_row=7,fontsize=7,fontsize_number=10)
-pheatgsv(lim$wp,fontsize_row=6,show_rownames=F,fontsize=7,showp = F)
-pheatgsv(lim$kegg,fontsize_row=6,show_rownames=F,fontsize=7,showp = F)
-pheatgsv(lim$kegg,fontsize_row=6,show_rownames=F,fontsize=7,showp = T)
+pheatgsv(fontsize_row=7,fontsize=7,fontsize_number=10,filename="hallmark.tiff")
+#pheatgsv(lim$wp,fontsize_row=6,show_rownames=F,fontsize=7,showp = F)
+#pheatgsv(lim$kegg,fontsize_row=6,show_rownames=F,fontsize=7,showp = F)
+#pheatgsv(lim$kegg,fontsize_row=6,show_rownames=F,fontsize=7,showp = T)
